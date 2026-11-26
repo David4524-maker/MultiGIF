@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MultiGIF</title>
+<style>
+:root{--b:#1e6fff;--d:#0b2a6b;--l:#eaf2ff}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--l);color:var(--d)}
+header{background:var(--d);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:5px solid var(--b)}
+h1{margin:0;font-size:28px}h1 span{color:#7db6ff}h3{margin:16px 0 8px}
+nav{display:flex;gap:8px;margin-left:auto}
+nav button{background:transparent;color:#fff;border:2px solid #7db6ff;border-radius:20px;padding:8px 16px;font:bold 14px Arial;cursor:pointer}
+nav button.on{background:var(--b);border-color:#fff}
+main{max-width:1000px;margin:auto;padding:16px}
+.panel{background:#fff;border:3px solid var(--d);border-radius:14px;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input,select,button{font:14px Arial;color:var(--d);border:2px solid var(--d);border-radius:8px;padding:8px 10px;background:#fff}
+input[type=range]{width:100%;padding:0;accent-color:var(--b)}input[type=color]{padding:0;width:40px;height:34px}input[type=checkbox]{width:auto}
+button{cursor:pointer;font-weight:bold}button:hover{background:var(--l)}
+button.p{background:var(--b);color:#fff;border-color:var(--d)}button.p:hover{background:#1558cc}button:disabled{opacity:.5;cursor:wait}
+button.big{width:100%;font-size:16px;padding:12px;margin-top:14px}
+label{display:block;font-size:13px;font-weight:bold;margin:8px 0}label input[type=text],label select{width:100%;margin-top:4px}
+#grid{columns:4 190px;column-gap:10px}
+.card{break-inside:avoid;margin-bottom:10px;border:2px solid var(--d);border-radius:10px;overflow:hidden;background:#cfe0ff}
+.card img{width:100%;display:block}.acts{display:flex;border-top:2px solid var(--d)}
+.acts button{flex:1;border:0;border-radius:0;padding:7px 2px;font-size:12px;background:#fff}.acts button+button{border-left:2px solid var(--d)}
+.mk{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.drop{display:block;border:3px dashed var(--b);border-radius:12px;padding:22px;text-align:center;cursor:pointer;background:var(--l);font-size:15px}
+.drop small{font-weight:normal}
+canvas,#out{width:100%;max-width:100%;border:3px solid var(--d);border-radius:10px;margin-top:10px;background:#000;display:block}
+progress{width:100%;height:14px;margin-top:8px;accent-color:var(--b)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--d);color:#fff;padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .25s;pointer-events:none;border:2px solid var(--b);max-width:90%;text-align:center}
+summary{cursor:pointer;font-weight:bold;margin:8px 0}small{color:#3a5a9a}
+</style></head><body>
+<header><h1>Multi<span>GIF</span></h1>
+<nav><select id="lg" aria-label="Language"></select><button class="on" data-t="pop">GIF populares</button><button data-t="mk">Crear mi GIF</button></nav></header>
+<main>
+<section id="pop" class="panel">
+<div class="row"><input id="q" placeholder="Busca GIF: gatos, risa, baile…" style="flex:1;min-width:180px"><select id="n" title="Cantidad de GIF"><option>24</option><option>48</option><option>72</option><option>100</option></select><button class="p" id="go">Buscar</button></div>
+<details id="kd"><summary>API key (Giphy)</summary>
+<div class="row"><input id="key" placeholder="API key" style="flex:1;min-width:200px"><button class="p" id="sk">Guardar y cargar</button></div>
+<small><a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noopener">developers.giphy.com/dashboard</a><br><span id="kh"></span></small></details>
+<p id="st"></p><div id="grid"></div><p><small>Powered by GIPHY</small></p>
+</section>
+<section id="mk" class="panel" hidden><div class="mk">
+<div>
+<label class="drop"><input type="file" id="file" accept="video/*,.mp4" hidden><b>Sube tu video</b><br><small>.mp4, .webm, .mov… (todo se procesa en tu equipo)</small></label>
+<canvas id="cv" width="320" height="180"></canvas><progress id="pg" max="100" value="0" hidden></progress>
+<div id="res" hidden><img id="out" alt="Tu GIF"><div class="row"><button class="p" id="dl">Descargar GIF</button><button id="cp">Copiar GIF</button></div><small id="info"></small></div>
+</div>
+<div>
+<h3>1. Recorte y calidad</h3>
+<label>Inicio: <output id="o1">0</output> s<input type="range" id="st0" min="0" max="10" step="0.1" value="0"></label>
+<label>Duración: <output id="o2">3</output> s<input type="range" id="dur" min="1" max="10" step="0.5" value="3"></label>
+<div class="row"><label style="flex:1">Ancho<select id="w"><option>240</option><option selected>320</option><option>400</option><option>480</option></select></label>
+<label style="flex:1">Fotogramas/seg<select id="fps"><option>8</option><option>10</option><option selected>12</option><option>15</option></select></label></div>
+<h3>2. Decoraciones (opcional)</h3>
+<label>Texto arriba<input type="text" id="t1" maxlength="40"></label>
+<label>Texto abajo<input type="text" id="t2" maxlength="40"></label>
+<div class="row"><label style="margin:0">Color del texto</label><input type="color" id="tc" value="#ffffff"></div>
+<div class="row"><label style="flex:1">Pegatina<select id="e"><option value="">Ninguna</option><option>😂</option><option>🔥</option><option>❤️</option><option>😎</option><option>⭐</option><option>🎉</option><option>👍</option></select></label>
+<label style="flex:1">Posición<select id="ep"><option value="0">Arriba izquierda</option><option value="1" selected>Arriba derecha</option><option value="2">Abajo izquierda</option><option value="3">Abajo derecha</option></select></label></div>
+<label>Filtro<select id="f"><option value="none">Sin filtro</option><option value="grayscale(1)">Blanco y negro</option><option value="sepia(1)">Sepia</option><option value="invert(1)">Negativo</option><option value="saturate(2) contrast(1.15)">Colores vivos</option><option value="blur(2px)">Desenfoque</option></select></label>
+<div class="row"><label style="margin:0"><input type="checkbox" id="bd"> Marco</label><input type="color" id="bc" value="#1e6fff"></div>
+<button class="p big" id="mkbtn">Convertir a GIF</button>
+</div></div></section>
+</main><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.opacity=1;clearTimeout(toast.i);toast.i=setTimeout(()=>t.style.opacity=0,2600)};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));$('#pop').hidden=b.dataset.t!='pop';$('#mk').hidden=b.dataset.t!='mk'});
+
+/* ---------- Idiomas ---------- */
+const K='t1 t2 ph go sv kh dt ds h1 h2 lst ldu lw lf lt1 lt2 lc le lp lfi lm no p0 p1 p2 p3 f0 f1 f2 f3 f4 f5 cv cvi cp lk dn tc tf tg tb tv tr sl s429 se sn str sq sc'.split(' '),L={};
+for(const[c,x]of Object.entries({"es": "GIF populares|Crear mi GIF|Busca GIF: gatos, risa…|Buscar|Guardar y cargar|Crea una app tipo API (gratis), copia la key y pégala arriba.|Sube tu video|Todo se procesa en tu equipo|Recorte y calidad|Decoraciones (opcional)|Inicio|Duración|Ancho|Fotogramas/seg|Texto arriba|Texto abajo|Color del texto|Pegatina|Posición|Filtro|Marco|Ninguna|Arriba izquierda|Arriba derecha|Abajo izquierda|Abajo derecha|Sin filtro|Blanco y negro|Sepia|Negativo|Colores vivos|Desenfoque|Convertir a GIF|Convirtiendo…|Copiar GIF|Enlace|Descargar|Enlace copiado|Error|GIF copiado|Tu navegador no copia GIF animados. Usa Enlace o Descargar.|Primero sube un video|¡Tu GIF está listo!|Cargando…|Demasiadas peticiones. Espera un rato.|Error {0}. Revisa tu API key de Giphy.|Sin resultados|Tendencias del momento|Resultados de “{0}”|Sin conexión con Giphy", "en": "Popular GIFs|Make my GIF|Search GIFs: cats, laugh…|Search|Save and load|Create a free API-type app, copy the key and paste it above.|Upload your video|Everything is processed on your device|Trim and quality|Decorations (optional)|Start|Duration|Width|Frames/sec|Top text|Bottom text|Text color|Sticker|Position|Filter|Frame|None|Top left|Top right|Bottom left|Bottom right|No filter|Black and white|Sepia|Negative|Vivid colors|Blur|Convert to GIF|Converting…|Copy GIF|Link|Download|Link copied|Error|GIF copied|Your browser can’t copy animated GIFs. Use Link or Download.|Upload a video first|Your GIF is ready!|Loading…|Too many requests. Wait a bit.|Error {0}. Check your Giphy API key.|No results|Trending now|Results for “{0}”|No connection to Giphy", "pt": "GIFs populares|Criar meu GIF|Buscar GIFs: gatos, riso…|Buscar|Salvar e carregar|Crie um app do tipo API (grátis), copie a chave e cole acima.|Envie seu vídeo|Tudo é processado no seu dispositivo|Corte e qualidade|Decorações (opcional)|Início|Duração|Largura|Quadros/seg|Texto superior|Texto inferior|Cor do texto|Adesivo|Posição|Filtro|Moldura|Nenhum|Superior esquerdo|Superior direito|Inferior esquerdo|Inferior direito|Sem filtro|Preto e branco|Sépia|Negativo|Cores vivas|Desfoque|Converter em GIF|Convertendo…|Copiar GIF|Link|Baixar|Link copiado|Erro|GIF copiado|Seu navegador não copia GIFs animados. Use Link ou Baixar.|Envie um vídeo primeiro|Seu GIF está pronto!|Carregando…|Muitas solicitações. Aguarde um pouco.|Erro {0}. Verifique sua API key do Giphy.|Sem resultados|Em alta agora|Resultados para “{0}”|Sem conexão com o Giphy", "fr": "GIF populaires|Créer mon GIF|Chercher des GIF : chats, rire…|Chercher|Enregistrer et charger|Créez une app de type API (gratuit), copiez la clé et collez-la ci-dessus.|Importez votre vidéo|Tout est traité sur votre appareil|Découpe et qualité|Décorations (facultatif)|Début|Durée|Largeur|Images/s|Texte du haut|Texte du bas|Couleur du texte|Autocollant|Position|Filtre|Cadre|Aucun|En haut à gauche|En haut à droite|En bas à gauche|En bas à droite|Sans filtre|Noir et blanc|Sépia|Négatif|Couleurs vives|Flou|Convertir en GIF|Conversion…|Copier le GIF|Lien|Télécharger|Lien copié|Erreur|GIF copié|Votre navigateur ne copie pas les GIF animés. Utilisez Lien ou Télécharger.|Importez d’abord une vidéo|Votre GIF est prêt !|Chargement…|Trop de requêtes. Patientez un peu.|Erreur {0}. Vérifiez votre clé API Giphy.|Aucun résultat|Tendances du moment|Résultats pour « {0} »|Pas de connexion à Giphy", "de": "Beliebte GIFs|Mein GIF erstellen|GIFs suchen: Katzen, Lachen…|Suchen|Speichern und laden|Erstelle eine kostenlose App vom Typ API, kopiere den Key und füge ihn oben ein.|Video hochladen|Alles wird auf deinem Gerät verarbeitet|Zuschnitt und Qualität|Dekorationen (optional)|Start|Dauer|Breite|Bilder/Sek.|Text oben|Text unten|Textfarbe|Sticker|Position|Filter|Rahmen|Keine|Oben links|Oben rechts|Unten links|Unten rechts|Kein Filter|Schwarzweiß|Sepia|Negativ|Lebhafte Farben|Weichzeichner|In GIF umwandeln|Wird umgewandelt…|GIF kopieren|Link|Herunterladen|Link kopiert|Fehler|GIF kopiert|Dein Browser kann animierte GIFs nicht kopieren. Nutze Link oder Herunterladen.|Lade zuerst ein Video hoch|Dein GIF ist fertig!|Lädt…|Zu viele Anfragen. Warte kurz.|Fehler {0}. Prüfe deinen Giphy-API-Key.|Keine Ergebnisse|Gerade im Trend|Ergebnisse für „{0}“|Keine Verbindung zu Giphy", "it": "GIF popolari|Crea il mio GIF|Cerca GIF: gatti, risate…|Cerca|Salva e carica|Crea un’app di tipo API (gratis), copia la chiave e incollala sopra.|Carica il tuo video|Tutto viene elaborato sul tuo dispositivo|Taglio e qualità|Decorazioni (facoltativo)|Inizio|Durata|Larghezza|Fotogrammi/sec|Testo in alto|Testo in basso|Colore del testo|Sticker|Posizione|Filtro|Cornice|Nessuno|In alto a sinistra|In alto a destra|In basso a sinistra|In basso a destra|Nessun filtro|Bianco e nero|Seppia|Negativo|Colori vivaci|Sfocatura|Converti in GIF|Conversione…|Copia GIF|Link|Scarica|Link copiato|Errore|GIF copiata|Il browser non copia le GIF animate. Usa Link o Scarica.|Carica prima un video|Il tuo GIF è pronto!|Caricamento…|Troppe richieste. Aspetta un po’.|Errore {0}. Controlla la tua API key di Giphy.|Nessun risultato|Di tendenza ora|Risultati per “{0}”|Nessuna connessione a Giphy", "ja": "人気のGIF|GIFを作る|GIFを検索：猫、笑い…|検索|保存して読み込む|API タイプのアプリを無料で作成し、キーをコピーして上に貼り付けてください。|動画をアップロード|処理はすべてお使いの端末で行われます|トリミングと画質|デコレーション（任意）|開始|長さ|幅|フレーム/秒|上のテキスト|下のテキスト|文字色|ステッカー|位置|フィルター|枠|なし|左上|右上|左下|右下|フィルターなし|白黒|セピア|ネガ|ビビッド|ぼかし|GIFに変換|変換中…|GIFをコピー|リンク|ダウンロード|リンクをコピーしました|エラー|GIFをコピーしました|このブラウザではアニメGIFをコピーできません。リンクかダウンロードを使ってください。|先に動画をアップロードしてください|GIFができました！|読み込み中…|リクエストが多すぎます。しばらくお待ちください。|エラー {0}。Giphy の API キーを確認してください。|結果なし|今のトレンド|「{0}」の検索結果|Giphy に接続できません", "zh": "热门GIF|制作我的GIF|搜索GIF：猫、大笑…|搜索|保存并加载|免费创建一个 API 类型的应用，复制密钥并粘贴到上方。|上传视频|所有处理都在你的设备上完成|剪辑与画质|装饰（可选）|开始|时长|宽度|帧/秒|顶部文字|底部文字|文字颜色|贴纸|位置|滤镜|边框|无|左上|右上|左下|右下|无滤镜|黑白|怀旧|反色|鲜艳|模糊|转换为GIF|转换中…|复制GIF|链接|下载|链接已复制|错误|GIF已复制|你的浏览器无法复制动图。请使用链接或下载。|请先上传视频|你的GIF已完成！|加载中…|请求过多，请稍等。|错误 {0}。请检查你的 Giphy API 密钥。|没有结果|当前热门|“{0}”的搜索结果|无法连接 Giphy", "ko": "인기 GIF|내 GIF 만들기|GIF 검색: 고양이, 웃음…|검색|저장 후 불러오기|API 유형 앱을 무료로 만들고 키를 복사해 위에 붙여넣으세요.|동영상 업로드|모든 처리는 내 기기에서 이루어집니다|자르기 및 화질|꾸미기(선택)|시작|길이|너비|초당 프레임|위 텍스트|아래 텍스트|글자 색|스티커|위치|필터|테두리|없음|왼쪽 위|오른쪽 위|왼쪽 아래|오른쪽 아래|필터 없음|흑백|세피아|네거티브|선명한 색|흐림|GIF로 변환|변환 중…|GIF 복사|링크|다운로드|링크 복사됨|오류|GIF 복사됨|이 브라우저는 움직이는 GIF를 복사할 수 없습니다. 링크나 다운로드를 사용하세요.|먼저 동영상을 업로드하세요|GIF가 완성되었습니다!|불러오는 중…|요청이 너무 많습니다. 잠시 기다려 주세요.|오류 {0}. Giphy API 키를 확인하세요.|결과 없음|지금 인기|“{0}” 검색 결과|Giphy에 연결할 수 없습니다", "ru": "Популярные GIF|Создать свой GIF|Поиск GIF: коты, смех…|Искать|Сохранить и загрузить|Создайте бесплатное приложение типа API, скопируйте ключ и вставьте выше.|Загрузите видео|Всё обрабатывается на вашем устройстве|Обрезка и качество|Украшения (по желанию)|Начало|Длительность|Ширина|Кадров/сек|Текст сверху|Текст снизу|Цвет текста|Стикер|Положение|Фильтр|Рамка|Нет|Сверху слева|Сверху справа|Снизу слева|Снизу справа|Без фильтра|Чёрно-белый|Сепия|Негатив|Яркие цвета|Размытие|Преобразовать в GIF|Преобразование…|Копировать GIF|Ссылка|Скачать|Ссылка скопирована|Ошибка|GIF скопирован|Браузер не копирует анимированные GIF. Используйте «Ссылка» или «Скачать».|Сначала загрузите видео|Ваш GIF готов!|Загрузка…|Слишком много запросов. Подождите немного.|Ошибка {0}. Проверьте API-ключ Giphy.|Нет результатов|Сейчас в тренде|Результаты по запросу «{0}»|Нет связи с Giphy"}))L[c]=x.split('|');
+let lang;try{lang=localStorage.getItem('mg_lang')}catch(e){}
+if(!L[lang])lang=(navigator.language||'es').slice(0,2);if(!L[lang])lang='es';
+const T=k=>L[lang][K.indexOf(k)];
+/* ---------- GIF populares (Giphy) ---------- */
+try{$('#key').value=localStorage.getItem('mg_key')||''}catch(e){}
+$('#kd').open=!$('#key').value;
+const copyTxt=t=>navigator.clipboard.writeText(t).then(()=>toast(T('tc')),()=>toast(T('tf')));
+function save(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click()}
+async function down(u){try{save(await(await fetch(u)).blob(),'multigif.gif')}catch(e){open(u,'_blank')}}
+async function copyGif(u,link){
+  try{const b=await(await fetch(u)).blob();await navigator.clipboard.write([new ClipboardItem({[b.type||'image/gif']:b})]);toast(T('tg'))}
+  catch(e){toast(T('tb'))}}
+function render(a){const g=$('#grid');g.innerHTML='';
+  a.forEach(d=>{const o=d.images.original.url,c=document.createElement('div'),i=new Image();c.className='card';i.loading='lazy';i.src=d.images.fixed_width.url;i.alt=d.title||'GIF';
+    c.append(i);const x=document.createElement('div');x.className='acts';
+    [['cp',()=>copyGif(o,true)],['lk',()=>copyTxt(o)],['dn',()=>down(o)]].forEach(([t,f])=>{const b=document.createElement('button');b.dataset.k=t;b.textContent=T(t);b.onclick=f;x.append(b)});
+    c.append(x);g.append(c)})}
+async function load(){
+  const q=$('#q').value.trim(),k=$('#key').value.trim(),n=Math.min(100,Math.max(1,+$('#n').value||24));
+  try{localStorage.setItem('mg_key',k)}catch(e){}
+  if(!k){$('#kd').open=true;$('#st').textContent=T('kh');return}
+  const u=`https://api.giphy.com/v1/gifs/${q?'search':'trending'}?api_key=${k}&limit=${n}&rating=g${q?'&lang=es&q='+encodeURIComponent(q):''}`;
+  $('#st').textContent=T('sl');
+  try{const r=await fetch(u);
+    if(!r.ok){$('#kd').open=true;$('#st').textContent=r.status==429?T('s429'):T('se').replace('{0}',r.status);return}
+    const j=await r.json();render(j.data);
+    $('#st').textContent=j.data.length?(q?T('sq').replace('{0}',q):T('str')):T('sn')}
+  catch(e){$('#st').textContent=T('sc')}}
+$('#go').onclick=load;$('#sk').onclick=load;$('#q').onkeydown=e=>{if(e.key=='Enter')load()};load();
+
+/* ---------- Crear GIF desde video ---------- */
+const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';
+const cv=$('#cv'),cx=cv.getContext('2d',{willReadFrequently:true});let gifBlob;
+const seek=t=>new Promise(r=>{t=Math.min(Math.max(0,t),v.duration-.05);if(Math.abs(v.currentTime-t)<.001)return r();v.onseeked=()=>r();v.currentTime=t});
+const size=()=>{const w=+$('#w').value;return[w,Math.round(w*v.videoHeight/v.videoWidth/2)*2]};
+function draw(w,h){
+  cx.filter=$('#f').value;cx.drawImage(v,0,0,w,h);cx.filter='none';
+  const fs=Math.round(w/10);cx.font=`bold ${fs}px Arial`;cx.textAlign='center';cx.textBaseline='middle';cx.lineJoin='round';cx.lineWidth=fs/6;cx.strokeStyle='#000';cx.fillStyle=$('#tc').value;
+  [['#t1',fs*.8],['#t2',h-fs*.8]].forEach(([id,y])=>{const t=$(id).value;if(t){cx.strokeText(t,w/2,y,w*.95);cx.fillText(t,w/2,y,w*.95)}});
+  const e=$('#e').value;if(e){const p=+$('#ep').value;cx.font=`${Math.round(w/5)}px Arial`;cx.fillText(e,[.14,.86,.14,.86][p]*w,[.2,.2,.8,.8][p]*h)}
+  if($('#bd').checked){const l=Math.max(6,w/30);cx.lineWidth=l;cx.strokeStyle=$('#bc').value;cx.strokeRect(l/2,l/2,w-l,h-l)}}
+function preview(){if(!v.videoWidth)return;const[w,h]=size();cv.width=w;cv.height=h;draw(w,h)}
+function labels(){$('#o1').textContent=$('#st0').value;$('#o2').textContent=$('#dur').value}
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;
+  v.src=URL.createObjectURL(f);
+  v.onloadedmetadata=()=>{const d=v.duration,s=$('#st0'),u=$('#dur');
+    s.max=Math.max(0,d-.5).toFixed(1);s.value=0;u.max=Math.min(10,Math.max(1,Math.floor(d*2)/2));if(+u.value>+u.max)u.value=u.max;
+    labels();$('#res').hidden=true;seek(0).then(preview)}};
+$('#mk').addEventListener('input',e=>{if(e.target.id=='file')return;labels();if(e.target.id=='st0')seek(+e.target.value).then(preview);else preview()});
+
+const B=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+function quant(d,w,h){const o=new Uint8Array(w*h);let p=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++,p++){const t=(B[(y&3)*4+(x&3)]/16-.5)*51,i=p*4,q=c=>Math.min(5,Math.max(0,Math.round((d[i+c]+t)/51)));o[p]=q(0)*36+q(1)*6+q(2)}
+  return o}
+function lzw(x){const out=[];let bits=9,nx=258,cur=0,ns=0,d=new Map;
+  const put=c=>{cur|=c<<ns;ns+=bits;while(ns>=8){out.push(cur&255);cur>>>=8;ns-=8}};
+  put(256);let p=x[0];
+  for(let i=1;i<x.length;i++){const c=x[i],k=p<<8|c,g=d.get(k);
+    if(g!==undefined)p=g;else{put(p);
+      if(nx===4096){put(256);d=new Map;nx=258;bits=9}else{if(nx>=(1<<bits))bits++;d.set(k,nx++)}
+      p=c}}
+  put(p);put(257);if(ns>0)out.push(cur&255);return out}
+function gif(fr,w,h,dl){const o=[],a=(...x)=>{for(const n of x)o.push(n)};
+  'GIF89a'.split('').forEach(c=>o.push(c.charCodeAt(0)));a(w&255,w>>8,h&255,h>>8,0xF7,0,0);
+  for(let i=0;i<256;i++)a(i<216?(i/36|0)*51:0,i<216?(i/6|0)%6*51:0,i<216?i%6*51:0);
+  a(0x21,0xFF,11);'NETSCAPE2.0'.split('').forEach(c=>o.push(c.charCodeAt(0)));a(3,1,0,0,0);
+  for(const f of fr){a(0x21,0xF9,4,4,dl&255,dl>>8,0,0,0x2C,0,0,0,0,w&255,w>>8,h&255,h>>8,0,8);
+    const b=lzw(f);for(let i=0;i<b.length;i+=255){const c=b.slice(i,i+255);a(c.length);for(const n of c)o.push(n)}a(0)}
+  a(0x3B);return new Blob([new Uint8Array(o)],{type:'image/gif'})}
+
+$('#mkbtn').onclick=async()=>{
+  if(!v.videoWidth)return toast(T('tv'));
+  const btn=$('#mkbtn'),pg=$('#pg'),[w,h]=size(),fps=+$('#fps').value,s=+$('#st0').value,
+    n=Math.max(1,Math.floor(Math.min(+$('#dur').value,v.duration-s)*fps)),fr=[];
+  btn.disabled=true;btn.textContent=T('cvi');pg.hidden=false;pg.value=0;$('#res').hidden=true;cv.width=w;cv.height=h;
+  try{
+    for(let i=0;i<n;i++){await seek(s+i/fps);draw(w,h);fr.push(quant(cx.getImageData(0,0,w,h).data,w,h));pg.value=(i+1)/n*90;await new Promise(r=>setTimeout(r))}
+    gifBlob=gif(fr,w,h,Math.round(100/fps));pg.value=100;
+    const old=$('#out').src;$('#out').src=URL.createObjectURL(gifBlob);if(old.startsWith('blob:'))URL.revokeObjectURL(old);
+    $('#info').textContent=`${w}×${h} px · ${n} frames · ${(gifBlob.size/1048576).toFixed(2)} MB`;
+    $('#res').hidden=false;toast(T('tr'))
+  }catch(e){toast(T('tf'))}
+  btn.disabled=false;btn.textContent=T('cv');pg.hidden=true;preview()};
+$('#dl').onclick=()=>gifBlob&&save(gifBlob,'mi-multigif.gif');
+$('#cp').onclick=()=>gifBlob&&copyGif($('#out').src,false);
+const NAMES={es:'Español',en:'English',pt:'Português',fr:'Français',de:'Deutsch',it:'Italiano',ja:'日本語',zh:'中文',ko:'한국어',ru:'Русский'};
+function setT(el,x){const n=[...el.childNodes].find(c=>c.nodeType==3&&c.nodeValue.trim());n?n.nodeValue=n.nodeValue.replace(n.nodeValue.trim(),x):el.textContent=x}
+function applyLang(){document.documentElement.lang=lang;
+  const E=(e,k,x='')=>setT(typeof e=='string'?$(e):e,T(k)+x),h=document.querySelectorAll('#mk h3');
+  E('nav [data-t=pop]','t1');E('nav [data-t=mk]','t2');E('#go','go');E('#sk','sv');E('#kh','kh');E('.drop b','dt');E('.drop small','ds');
+  E('#mkbtn','cv');E('#dl','dn');E('#cp','cp');E(h[0],'h1');E(h[1],'h2');
+  E($('#st0').parentElement,'lst',':');E($('#dur').parentElement,'ldu',':');E($('#w').parentElement,'lw');E($('#fps').parentElement,'lf');
+  E($('#t1').parentElement,'lt1');E($('#t2').parentElement,'lt2');E($('#tc').previousElementSibling,'lc');E($('#e').parentElement,'le');
+  E($('#ep').parentElement,'lp');E($('#f').parentElement,'lfi');E($('#bd').parentElement,'lm');E($('#e').options[0],'no');
+  for(let i=0;i<4;i++)E($('#ep').options[i],'p'+i);for(let i=0;i<6;i++)E($('#f').options[i],'f'+i);
+  $('#q').placeholder=T('ph');document.querySelectorAll('[data-k]').forEach(b=>b.textContent=T(b.dataset.k))}
+const lg=$('#lg');for(const c in NAMES)lg.add(new Option(NAMES[c],c));lg.value=lang;
+lg.onchange=()=>{lang=lg.value;try{localStorage.setItem('mg_lang',lang)}catch(e){}applyLang()};applyLang();
+</script></body></html>
